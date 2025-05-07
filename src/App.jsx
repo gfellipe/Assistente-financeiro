@@ -6,6 +6,7 @@ export default function App() {
   const [receber, setReceber] = useState([]);
   const [salario, setSalario] = useState("");
   const [historico, setHistorico] = useState([]);
+  const [filtroMes, setFiltroMes] = useState("");
 
   useEffect(() => {
     const d = localStorage.getItem("dividas");
@@ -18,17 +19,29 @@ export default function App() {
     if (h) setHistorico(JSON.parse(h));
   }, []);
 
-  useEffect(() => localStorage.setItem("dividas", JSON.stringify(dividas)), [dividas]);
-  useEffect(() => localStorage.setItem("receber", JSON.stringify(receber)), [receber]);
   useEffect(() => {
-    const valor = parseFloat(salario.replace(",", "."));
-    if (!isNaN(valor)) localStorage.setItem("salario", valor);
+    localStorage.setItem("dividas", JSON.stringify(dividas));
+  }, [dividas]);
+
+  useEffect(() => {
+    localStorage.setItem("receber", JSON.stringify(receber));
+  }, [receber]);
+
+  useEffect(() => {
+    if (salario !== "") {
+      const valor = parseFloat(salario.replace(",", "."));
+      if (!isNaN(valor)) localStorage.setItem("salario", valor);
+    }
   }, [salario]);
-  useEffect(() => localStorage.setItem("historico", JSON.stringify(historico)), [historico]);
+
+  useEffect(() => {
+    localStorage.setItem("historico", JSON.stringify(historico));
+  }, [historico]);
 
   const [formDivida, setFormDivida] = useState({
     nome: "", valor: "", parcelas: "1", vencimento: "", pago: false, categoria: ""
   });
+
   const [formReceber, setFormReceber] = useState({
     devedor: "", nome: "", valor: "", parcelas: "1", categoria: ""
   });
@@ -47,7 +60,9 @@ export default function App() {
     setFormReceber({ devedor: "", nome: "", valor: "", parcelas: "1", categoria: "" });
   };
 
-  const deletarItem = (lista, setLista, id) => setLista(lista.filter(i => i.id !== id));
+  const deletarItem = (lista, setLista, id) => {
+    setLista(lista.filter(i => i.id !== id));
+  };
 
   const salvarHistoricoMensal = () => {
     const snapshot = {
@@ -81,6 +96,7 @@ export default function App() {
         placeholder="Salário do mês"
         value={salario}
         onChange={e => setSalario(e.target.value)}
+        inputMode="decimal"
       />
       <div className="text-lg font-semibold">Saldo final: {formatarMoeda(saldoFinal)}</div>
       <div className="text-sm">Total Dívidas: {formatarMoeda(totalGastos)}</div>
@@ -88,121 +104,89 @@ export default function App() {
     </div>
   );
 
-  const TelaDividas = () => {
-    const totalPagas = dividas.filter(d => d.pago).length;
-    const totalNaoPagas = dividas.filter(d => !d.pago).length;
-
-    return (
-      <div className="space-y-4">
-        <div className="grid gap-2 md:grid-cols-3">
-          <input className="p-2 border rounded" placeholder="Nome" value={formDivida.nome} onChange={e => setFormDivida({ ...formDivida, nome: e.target.value })} />
-          <input className="p-2 border rounded" placeholder="Valor" value={formDivida.valor} onChange={e => setFormDivida({ ...formDivida, valor: e.target.value })} />
-          <select className="p-2 border rounded" value={formDivida.parcelas} onChange={e => setFormDivida({ ...formDivida, parcelas: e.target.value })}>
-            {[...Array(12)].map((_, i) => <option key={i + 1}>{i + 1}</option>)}
-          </select>
-          <input type="date" className="p-2 border rounded" value={formDivida.vencimento} onChange={e => setFormDivida({ ...formDivida, vencimento: e.target.value })} />
-          <input className="p-2 border rounded" placeholder="Categoria" value={formDivida.categoria} onChange={e => setFormDivida({ ...formDivida, categoria: e.target.value })} />
-          <button onClick={adicionarDivida} className="bg-green-600 text-white px-4 py-2 rounded col-span-full">Adicionar</button>
-        </div>
-        <table className="w-full text-sm text-center">
-          <thead>
-            <tr className="bg-green-200">
-              <th>Nome</th><th>Valor</th><th>Parcelas</th><th>Vencimento</th><th>Pago</th><th>Categoria</th><th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {dividas.map(d => (
-              <tr key={d.id} className={`bg-green-50 ${estaVencendo(d.vencimento) ? "text-red-500" : ""}`}>
-                <td>{d.nome}</td>
-                <td>{formatarMoeda(d.valor)}</td>
-                <td>{d.parcelas}</td>
-                <td>{d.vencimento ? formatarData(d.vencimento) : ""}</td>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={d.pago}
-                    onChange={() => setDividas(dividas.map(item => item.id === d.id ? { ...item, pago: !item.pago } : item))}
-                  />
-                </td>
-                <td>{d.categoria}</td>
-                <td><button onClick={() => deletarItem(dividas, setDividas, d.id)} className="text-red-500">Excluir</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="text-center">
-          <div className="font-semibold">Resumo de Pagamentos</div>
-          <div>Dívidas Pagas: {totalPagas}</div>
-          <div>Dívidas Não Pagas: {totalNaoPagas}</div>
-        </div>
+  const TelaDividas = () => (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <input className="p-2 border w-full rounded" placeholder="Nome" value={formDivida.nome}
+          onChange={e => setFormDivida({ ...formDivida, nome: e.target.value })} />
+        <input className="p-2 border w-full rounded" placeholder="Valor" value={formDivida.valor}
+          onChange={e => setFormDivida({ ...formDivida, valor: e.target.value })} inputMode="decimal" />
+        <input className="p-2 border w-full rounded" type="number" placeholder="Parcelas"
+          value={formDivida.parcelas} onChange={e => setFormDivida({ ...formDivida, parcelas: e.target.value })} />
+        <input className="p-2 border w-full rounded" type="date"
+          value={formDivida.vencimento} onChange={e => setFormDivida({ ...formDivida, vencimento: e.target.value })} />
+        <input className="p-2 border w-full rounded" placeholder="Categoria"
+          value={formDivida.categoria} onChange={e => setFormDivida({ ...formDivida, categoria: e.target.value })} />
+        <button className="w-full bg-green-600 text-white py-2 rounded" onClick={adicionarDivida}>Adicionar</button>
       </div>
-    );
-  };
+      {dividas.map(d => (
+        <div key={d.id} className="p-2 border rounded bg-white space-y-1">
+          <div className="font-semibold">{d.nome}</div>
+          <div>Valor: {formatarMoeda(d.valor)} | Parcelas: {d.parcelas}</div>
+          {d.vencimento && <div className={estaVencendo(d.vencimento) ? "text-red-600" : ""}>Vence: {formatarData(d.vencimento)}</div>}
+          <div>Categoria: {d.categoria || "—"}</div>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={d.pago} onChange={() =>
+              setDividas(dividas.map(x => x.id === d.id ? { ...x, pago: !x.pago } : x))} /> Pago
+          </label>
+          <button className="text-red-600" onClick={() => deletarItem(dividas, setDividas, d.id)}>🗑️</button>
+        </div>
+      ))}
+    </div>
+  );
 
   const TelaReceber = () => (
     <div className="space-y-4">
-      <div className="grid gap-2 md:grid-cols-3">
-        <input className="p-2 border rounded" placeholder="Nome do devedor" value={formReceber.devedor} onChange={e => setFormReceber({ ...formReceber, devedor: e.target.value })} />
-        <input className="p-2 border rounded" placeholder="Descrição" value={formReceber.nome} onChange={e => setFormReceber({ ...formReceber, nome: e.target.value })} />
-        <input className="p-2 border rounded" placeholder="Valor" value={formReceber.valor} onChange={e => setFormReceber({ ...formReceber, valor: e.target.value })} />
-        <select className="p-2 border rounded" value={formReceber.parcelas} onChange={e => setFormReceber({ ...formReceber, parcelas: e.target.value })}>
-          {[...Array(12)].map((_, i) => <option key={i + 1}>{i + 1}</option>)}
-        </select>
-        <input className="p-2 border rounded" placeholder="Categoria" value={formReceber.categoria} onChange={e => setFormReceber({ ...formReceber, categoria: e.target.value })} />
-        <button onClick={adicionarReceber} className="bg-green-600 text-white px-4 py-2 rounded col-span-full">Adicionar</button>
+      <div className="space-y-2">
+        <input className="p-2 border w-full rounded" placeholder="Nome" value={formReceber.nome}
+          onChange={e => setFormReceber({ ...formReceber, nome: e.target.value })} />
+        <input className="p-2 border w-full rounded" placeholder="Devedor" value={formReceber.devedor}
+          onChange={e => setFormReceber({ ...formReceber, devedor: e.target.value })} />
+        <input className="p-2 border w-full rounded" placeholder="Valor" value={formReceber.valor}
+          onChange={e => setFormReceber({ ...formReceber, valor: e.target.value })} inputMode="decimal" />
+        <input className="p-2 border w-full rounded" type="number" placeholder="Parcelas" value={formReceber.parcelas}
+          onChange={e => setFormReceber({ ...formReceber, parcelas: e.target.value })} />
+        <input className="p-2 border w-full rounded" placeholder="Categoria"
+          value={formReceber.categoria} onChange={e => setFormReceber({ ...formReceber, categoria: e.target.value })} />
+        <button className="w-full bg-green-600 text-white py-2 rounded" onClick={adicionarReceber}>Adicionar</button>
       </div>
-      <table className="w-full text-sm text-center">
-        <thead>
-          <tr className="bg-green-200">
-            <th>Devedor</th><th>Descrição</th><th>Valor</th><th>Parcelas</th><th>Categoria</th><th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {receber.map(r => (
-            <tr key={r.id} className="bg-green-50">
-              <td>{r.devedor}</td>
-              <td>{r.nome}</td>
-              <td>{formatarMoeda(r.valor)}</td>
-              <td>{r.parcelas}</td>
-              <td>{r.categoria}</td>
-              <td><button onClick={() => deletarItem(receber, setReceber, r.id)} className="text-red-500">Excluir</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {receber.map(r => (
+        <div key={r.id} className="p-2 border rounded bg-white space-y-1">
+          <div className="font-semibold">{r.nome}</div>
+          <div>De: {r.devedor} | Valor: {formatarMoeda(r.valor)} | Parcelas: {r.parcelas}</div>
+          <div>Categoria: {r.categoria || "—"}</div>
+          <button className="text-red-600" onClick={() => deletarItem(receber, setReceber, r.id)}>🗑️</button>
+        </div>
+      ))}
     </div>
   );
 
   const TelaRelatorio = () => (
-    <div className="text-center space-y-4">
-      <div className="text-xl font-semibold">Relatório Financeiro</div>
+    <div className="space-y-2">
+      <div className="font-semibold">Resumo do Mês</div>
+      <div>Salário: {formatarMoeda(salario)}</div>
       <div>Total Dívidas: {formatarMoeda(totalGastos)}</div>
-      <div>Total Receber: {formatarMoeda(totalReceber)}</div>
-      <div>Saldo Final: {formatarMoeda(saldoFinal)}</div>
-      <button onClick={salvarHistoricoMensal} className="bg-green-600 text-white px-4 py-2 rounded">Salvar Histórico</button>
+      <div>Pagos: {formatarMoeda(pagos)}</div>
+      <div>Total a Receber: {formatarMoeda(totalReceber)}</div>
+      <div className="font-bold">Saldo Final: {formatarMoeda(saldoFinal)}</div>
+      <button className="w-full bg-green-600 text-white py-2 rounded mt-4" onClick={salvarHistoricoMensal}>
+        Salvar Histórico do Mês
+      </button>
     </div>
   );
 
   const TelaHistorico = () => (
     <div className="space-y-4">
-      <div className="text-xl font-semibold text-center">Histórico Mensal</div>
-      <table className="w-full text-sm text-center">
-        <thead>
-          <tr className="bg-green-200">
-            <th>Mês</th><th>Salário</th><th>Dívidas</th><th>A Receber</th>
-          </tr>
-        </thead>
-        <tbody>
-          {historico.map(h => (
-            <tr key={h.id} className="bg-green-50">
-              <td>{h.data}</td>
-              <td>{formatarMoeda(h.salario)}</td>
-              <td>{formatarMoeda(h.dividas.reduce((s, d) => s + parseFloat(d.valor), 0))}</td>
-              <td>{formatarMoeda(h.receber.reduce((s, r) => s + parseFloat(r.valor), 0))}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <input className="p-2 border w-full rounded" placeholder="Filtrar por mês (ex: 2025-05)"
+        value={filtroMes} onChange={e => setFiltroMes(e.target.value)} />
+      {historico.filter(h => !filtroMes || h.data.startsWith(filtroMes)).map(h => (
+        <div key={h.id} className="p-3 border rounded bg-white space-y-1">
+          <div className="font-bold">Mês: {h.data}</div>
+          <div>Salário: {formatarMoeda(h.salario)}</div>
+          <div>Dívidas: {formatarMoeda(h.dividas.reduce((s, d) => s + parseFloat(d.valor), 0))}</div>
+          <div>Receber: {formatarMoeda(h.receber.reduce((s, r) => s + parseFloat(r.valor), 0))}</div>
+        </div>
+      ))}
     </div>
   );
 
@@ -211,16 +195,12 @@ export default function App() {
       <h1 className="text-2xl font-bold text-center mb-6">💰 Assistente Financeiro</h1>
       <div className="flex justify-center gap-2 mb-6 flex-wrap">
         {["inicio", "dividas", "receber", "relatorio", "historico"].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setAba(tab)}
-            className={`px-4 py-2 rounded-full ${aba === tab ? "bg-green-600 text-white" : "bg-white border border-green-400"}`}
-          >
+          <button key={tab} onClick={() => setAba(tab)}
+            className={`px-4 py-2 rounded-full ${aba === tab ? "bg-green-600 text-white" : "bg-white border border-green-400"}`}>
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
       </div>
-
       {aba === "inicio" && <TelaInicio />}
       {aba === "dividas" && <TelaDividas />}
       {aba === "receber" && <TelaReceber />}
